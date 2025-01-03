@@ -27,7 +27,8 @@
 
     <section class="results-section">
         <h2>Резултати</h2>
-
+        <h3 th:if="${inputData != null}" th:text="'[' + ${inputData} + ']'"></h3>
+        <br>
         <!-- Charts Section -->
         <div class="charts">
             <div class="chart">
@@ -48,7 +49,7 @@
                 <li>Мода: <span th:text="${mode}"></span></li>
                 <li>Медиана: <span th:text="${median}"></span></li>
                 <li>1-ви квартил (Q1): <span th:text="${q1}"></span></li>
-                <li>2-ри квартил (Медиана): <span th:text="${median}"></span></li>
+                <li>2-ри квартил (Q2, Медиана): <span th:text="${median}"></span></li>
                 <li>3-ти квартил (Q3): <span th:text="${q3}"></span></li>
                 <li>Дисперсия: <span th:text="${variance}"></span></li>
                 <li>Стандартно отклонение: <span th:text="${stdDev}"></span></li>

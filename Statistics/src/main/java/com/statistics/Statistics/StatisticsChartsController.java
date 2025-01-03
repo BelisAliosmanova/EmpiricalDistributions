@@ -57,6 +57,7 @@ public class StatisticsChartsController {
         String pieChartBase64 = encodeChartToBase64(pieChart, 800, 400);
 
         // Add statistics and chart images to the model
+        model.addAttribute("inputData", inputData);
         model.addAttribute("mean", mean);
         model.addAttribute("mode", mode);
         model.addAttribute("median", median);
