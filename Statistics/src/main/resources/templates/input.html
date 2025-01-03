@@ -1,14 +1,207 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="en" xmlns:th="">
 <head>
-    <title>Input Data</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Емпирични разпределения</title>
 </head>
 <body>
-<form action="/process" method="post">
-    <label for="data">Enter data (comma-separated):</label>
-    <textarea id="data" name="data" rows="5" cols="50"></textarea>
-    <br>
-    <button type="submit">Submit</button>
-</form>
+<header>
+    <h1>Емпирични разпределения</h1>
+</header>
+
+<main>
+    <section class="form-section">
+        <h2>Въведете вашите данни</h2>
+        <form action="/process" method="post" class="data-form">
+            <label for="data">Въвеждане на данни (разделени със запетая, редове с точка и запетая):</label>
+            <textarea id="data" name="data" rows="5" placeholder="пр. 52,53,54;55,56,57" required></textarea>
+            <button type="submit" class="submit-btn">Генериране на статистика</button>
+        </form>
+    </section>
+
+    <!-- Display error if exists -->
+    <section class="error-section" th:if="${error}">
+        <p th:text="${error}" style="color:red;"></p>
+    </section>
+
+    <section class="results-section">
+        <h2>Резултати</h2>
+
+        <!-- Charts Section -->
+        <div class="charts">
+            <div class="chart">
+                <h3>Стълбовидна диаграма</h3>
+                <img th:src="'data:image/png;base64,' + ${barChart}" alt="Bar Chart" id="barChart" />
+            </div>
+            <div class="chart">
+                <h3>Кръгова диаграма</h3>
+                <img th:src="'data:image/png;base64,' + ${pieChart}" alt="Pie Chart" id="pieChart" />
+            </div>
+        </div>
+
+        <!-- Statistics Section -->
+        <div class="statistics">
+            <h3>Резюме на статистиката</h3>
+            <ul>
+                <li>Средна стойност: <span th:text="${mean}"></span></li>
+                <li>Мода: <span th:text="${mode}"></span></li>
+                <li>Медиана: <span th:text="${median}"></span></li>
+                <li>1-ви квартил (Q1): <span th:text="${q1}"></span></li>
+                <li>2-ри квартил (Медиана): <span th:text="${median}"></span></li>
+                <li>3-ти квартил (Q3): <span th:text="${q3}"></span></li>
+                <li>Дисперсия: <span th:text="${variance}"></span></li>
+                <li>Стандартно отклонение: <span th:text="${stdDev}"></span></li>
+            </ul>
+        </div>
+    </section>
+</main>
+
+<footer>
+    <p>&copy; 2025 Емпирични разпределения</p>
+</footer>
+<style>
+    /* General Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+}
+
+body {
+    background-color: #f9f9f9;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* Header */
+header {
+    background-color: #4CAF50;
+    color: #fff;
+    padding: 1rem 0;
+    text-align: center;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+header h1 {
+    font-size: 2.5rem;
+}
+
+/* Main Section */
+main {
+    max-width: 1100px;
+    margin: 2rem auto;
+    padding: 1rem;
+    background: #fff;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+/* Form Section */
+.form-section {
+    margin-bottom: 2rem;
+}
+
+.form-section h2 {
+    margin-bottom: 1rem;
+    color: #4CAF50;
+    font-size: 1.8rem;
+}
+
+.data-form label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+.data-form textarea {
+    width: 100%;
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 1rem;
+}
+
+.data-form .submit-btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+    transition: background-color 0.3s ease-in-out;
+}
+
+.data-form .submit-btn:hover {
+    background-color: #45a049;
+}
+
+/* Results Section */
+.results-section h2 {
+    margin-bottom: 1.5rem;
+    font-size: 2rem;
+    color: #333;
+}
+
+.charts {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.chart {
+    flex: 1;
+    text-align: center;
+}
+
+.chart h3 {
+    margin-bottom: 0.5rem;
+    color: #4CAF50;
+}
+
+.chart img {
+    width: 100%;
+    max-width: 600px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Statistics Summary */
+.statistics h3 {
+    margin-bottom: 1rem;
+    color: #4CAF50;
+}
+
+.statistics ul {
+    list-style-type: none;
+}
+
+.statistics li {
+    margin: 0.5rem 0;
+    font-size: 1.1rem;
+}
+
+.statistics span {
+    font-weight: bold;
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 1rem;
+    background-color: #4CAF50;
+    color: #fff;
+    margin-top: 2rem;
+    border-radius: 0 0 8px 8px;
+}
+
+</style>
 </body>
 </html>

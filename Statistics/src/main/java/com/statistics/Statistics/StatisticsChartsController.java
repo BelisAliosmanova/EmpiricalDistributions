@@ -22,110 +22,165 @@ public class StatisticsChartsController {
 
     @GetMapping("/")
     public String showInputForm() {
-        return "input";
+        return "input"; // This will render the input form (input.html)
     }
 
     @PostMapping("/process")
     public String processData(@RequestParam("data") String inputData, Model model) {
-        // Parse the input data
+        // Validate and parse the input data
         List<Integer> dataList = parseInputData(inputData);
 
-        // Mean
-        double mean = dataList.stream().mapToInt(Integer::intValue).average().orElse(0);
-
-        // Mode
-        Map<Integer, Long> frequencyMap = dataList.stream()
-                .collect(Collectors.groupingBy(e -> e, Collectors.counting()));
-        long maxFrequency = Collections.max(frequencyMap.values());
-        List<Integer> mode = frequencyMap.entrySet().stream()
-                .filter(entry -> entry.getValue() == maxFrequency)
-                .map(Map.Entry::getKey)
-                .toList();
-
-        // Median
-        Collections.sort(dataList);
-        double median;
-        int size = dataList.size();
-        if (size % 2 == 0) {
-            median = (dataList.get(size / 2 - 1) + dataList.get(size / 2)) / 2.0;
-        } else {
-            median = dataList.get(size / 2);
+        if (dataList.isEmpty()) {
+            model.addAttribute("error", "Невалидни или празни данни. Моля, въведете валидни числа, разделени със запетаи.");
+            return "input";
         }
 
-        // Quartiles
+        // Calculate statistics
+        double mean = dataList.stream().mapToInt(Integer::intValue).average().orElse(0);
+        List<Integer> mode = calculateMode(dataList);
+        double median = calculateMedian(dataList);
         double q1 = getPercentile(dataList, 25);
-        double q2 = median; // Median is the 2nd quartile
         double q3 = getPercentile(dataList, 75);
-
-        // Variance
-        double variance = dataList.stream()
-                .mapToDouble(value -> Math.pow(value - mean, 2))
-                .sum() / (dataList.size() - 1);
-
-        // Standard Deviation
+        double variance = calculateVariance(dataList, mean); // Change to sample or population as needed
         double stdDev = Math.sqrt(variance);
 
         // Create bar chart
-        DefaultCategoryDataset barDataset = new DefaultCategoryDataset();
-        for (Map.Entry<Integer, Long> entry : frequencyMap.entrySet()) {
-            barDataset.addValue(entry.getValue(), "Frequency", entry.getKey());
+        DefaultCategoryDataset barDataset = createBarDataset(dataList);
+        JFreeChart barChart = createBarChart(barDataset);
+
+        // Create pie chart
+        DefaultPieDataset pieDataset = createPieDataset(dataList);
+        JFreeChart pieChart = createPieChart(pieDataset);
+
+        // Convert charts to Base64
+        String barChartBase64 = encodeChartToBase64(barChart, 800, 400);
+        String pieChartBase64 = encodeChartToBase64(pieChart, 800, 400);
+
+        // Add statistics and chart images to the model
+        model.addAttribute("mean", mean);
+        model.addAttribute("mode", mode);
+        model.addAttribute("median", median);
+        model.addAttribute("q1", q1);
+        model.addAttribute("q3", q3);
+        model.addAttribute("variance", variance);
+        model.addAttribute("stdDev", stdDev);
+        model.addAttribute("barChart", barChartBase64);
+        model.addAttribute("pieChart", pieChartBase64);
+
+        return "input";
+    }
+
+    private List<Integer> parseInputData(String inputData) {
+        List<Integer> dataList = new ArrayList<>();
+
+        try {
+            String[] rows = inputData.split(";");
+
+            for (String row : rows) {
+                String[] values = row.split(",");
+                for (String value : values) {
+                    dataList.add(Integer.parseInt(value.trim()));
+                }
+            }
+        } catch (NumberFormatException e) {
+            System.out.println("Невалиден вход: " + e.getMessage());
         }
-        JFreeChart barChart = ChartFactory.createBarChart(
+
+        return dataList;
+    }
+
+    private List<Integer> calculateMode(List<Integer> dataList) {
+        Map<Integer, Long> frequencyMap = dataList.stream()
+                .collect(Collectors.groupingBy(e -> e, Collectors.counting()));
+
+        long maxFrequency = Collections.max(frequencyMap.values());
+
+        return frequencyMap.entrySet().stream()
+                .filter(entry -> entry.getValue() == maxFrequency)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
+    private double calculateMedian(List<Integer> dataList) {
+        List<Integer> sortedList = new ArrayList<>(dataList);
+        Collections.sort(sortedList);
+        int size = sortedList.size();
+
+        if (size % 2 == 0) {
+            return (sortedList.get(size / 2 - 1) + sortedList.get(size / 2)) / 2.0;
+        } else {
+            return sortedList.get(size / 2);
+        }
+    }
+
+    private double getPercentile(List<Integer> dataList, double percentile) {
+        List<Integer> sortedList = new ArrayList<>(dataList);
+        Collections.sort(sortedList);
+
+        double position = percentile / 100.0 * (sortedList.size() - 1);
+        int lowerIndex = (int) Math.floor(position);
+        int upperIndex = (int) Math.ceil(position);
+
+        if (lowerIndex == upperIndex) {
+            return sortedList.get(lowerIndex);
+        }
+
+        double fraction = position - lowerIndex;
+
+        return sortedList.get(lowerIndex) + fraction * (sortedList.get(upperIndex) - sortedList.get(lowerIndex));
+    }
+
+    private double calculateVariance(List<Integer> dataList, double mean) {
+        return dataList.stream()
+                .mapToDouble(value -> Math.pow(value - mean, 2))
+                .sum() / dataList.size(); // Change to (dataList.size() - 1) for sample variance
+    }
+
+    private DefaultCategoryDataset createBarDataset(List<Integer> dataList) {
+        DefaultCategoryDataset dataset = new DefaultCategoryDataset();
+        Map<Integer, Long> frequencyMap = dataList.stream()
+                .collect(Collectors.groupingBy(e -> e, Collectors.counting()));
+
+        for (Map.Entry<Integer, Long> entry : frequencyMap.entrySet()) {
+            dataset.addValue(entry.getValue(), "Frequency", entry.getKey());
+        }
+
+        return dataset;
+    }
+
+    private JFreeChart createBarChart(DefaultCategoryDataset dataset) {
+        return ChartFactory.createBarChart(
                 "Data Frequencies",
                 "Values",
                 "Frequency",
-                barDataset,
+                dataset,
                 PlotOrientation.VERTICAL,
                 false,
                 true,
                 false
         );
+    }
 
-        // Create pie chart
-        DefaultPieDataset pieDataset = new DefaultPieDataset();
+    private DefaultPieDataset createPieDataset(List<Integer> dataList) {
+        DefaultPieDataset dataset = new DefaultPieDataset();
+        Map<Integer, Long> frequencyMap = dataList.stream()
+                .collect(Collectors.groupingBy(e -> e, Collectors.counting()));
+
         for (Map.Entry<Integer, Long> entry : frequencyMap.entrySet()) {
-            pieDataset.setValue("Value " + entry.getKey(), entry.getValue());
+            dataset.setValue("Value " + entry.getKey(), entry.getValue());
         }
-        JFreeChart pieChart = ChartFactory.createPieChart(
+
+        return dataset;
+    }
+
+    private JFreeChart createPieChart(DefaultPieDataset dataset) {
+        return ChartFactory.createPieChart(
                 "Data Distribution",
-                pieDataset,
+                dataset,
                 true,
                 true,
                 false
         );
-
-        // Convert charts to Base64 images
-        model.addAttribute("barChart", encodeChartToBase64(barChart, 800, 400));
-        model.addAttribute("pieChart", encodeChartToBase64(pieChart, 800, 400));
-
-        // Add statistics to the model
-        model.addAttribute("mean", mean);
-        model.addAttribute("mode", mode);
-        model.addAttribute("median", median);
-        model.addAttribute("q1", q1);
-        model.addAttribute("q2", q2);
-        model.addAttribute("q3", q3);
-        model.addAttribute("variance", variance);
-        model.addAttribute("stdDev", stdDev);
-
-        return "charts";
-    }
-
-    private List<Integer> parseInputData(String inputData) {
-        List<Integer> dataList = new ArrayList<>();
-        String[] rows = inputData.split(";");
-        for (String row : rows) {
-            String[] values = row.split(",");
-            for (String value : values) {
-                dataList.add(Integer.parseInt(value.trim()));
-            }
-        }
-        return dataList;
-    }
-
-    private double getPercentile(List<Integer> sortedList, double percentile) {
-        int index = (int) Math.ceil(percentile / 100.0 * sortedList.size()) - 1;
-        return sortedList.get(index);
     }
 
     private String encodeChartToBase64(JFreeChart chart, int width, int height) {
@@ -133,6 +188,7 @@ public class StatisticsChartsController {
             BufferedImage bufferedImage = chart.createBufferedImage(width, height);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ImageIO.write(bufferedImage, "png", baos);
+
             return Base64.getEncoder().encodeToString(baos.toByteArray());
         } catch (Exception e) {
             e.printStackTrace();
