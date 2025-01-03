@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Results</title>
+</head>
+<body>
+<h1>Statistics</h1>
+<ul>
+    <li th:each="entry : ${statistics}">
+        <b th:text="${entry.key}"></b>: <span th:text="${entry.value}"></span>
+    </li>
+</ul>
+
+<h1>Charts</h1>
+<img th:src="@{${barChartPath}}" alt="Bar Chart">
+<img th:src="@{${pieChartPath}}" alt="Pie Chart">
+</body>
+</html>
